@@ -1,125 +1,257 @@
+// ignore_for_file: unnecessary_import, unused_import, prefer_const_constructors_in_immutables, library_private_types_in_public_api, unused_local_variable, unnecessary_null_comparison, prefer_interpolation_to_compose_strings, avoid_print
+
+import 'dart:io';
+import 'dart:math';
+import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:image_picker/image_picker.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
+class MyApp extends StatefulWidget {
+  MyApp({Key? key}) : super(key: key);
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a blue toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late ImagePicker imagePicker;
+  File? _image;
+  String result = '';
+  dynamic image;
+  late List<Face> faces;
+
+  //TODO declare detector
+  dynamic faceDetector;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    imagePicker = ImagePicker();
+
+    //TODO initialize detector
+    final options = FaceDetectorOptions(
+        enableLandmarks: true,
+        enableClassification: true,
+        enableTracking: true,
+        performanceMode: FaceDetectorMode.fast);
+    faceDetector = FaceDetector(options: options);
   }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
+  void dispose() {
+    super.dispose();
+  }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  //TODO capture image using camera
+  _imgFromCamera() async {
+    XFile? pickedFile = await imagePicker.pickImage(source: ImageSource.camera);
+    if (pickedFile != null) {
+      _image = File(pickedFile.path);
+      doFaceDetection();
+    }
+  }
 
-  void _incrementCounter() {
+  //TODO choose image using gallery
+  _imgFromGallery() async {
+    XFile? pickedFile =
+        await imagePicker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      _image = File(pickedFile.path);
+      doFaceDetection();
+    }
+  }
+
+  //TODO face detection code here
+  doFaceDetection() async {
+    result = "";
+    InputImage inputImage = InputImage.fromFile(_image!);
+    faces = await faceDetector.processImage(inputImage);
+
+    print("len: " + faces.length.toString());
+
+    for(Face f in faces){
+      if(f.smilingProbability !> 0.5){
+        result +="Smiling";
+      }else{
+        result +="Serious";
+      }
+    }
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _image;
+      result;
+    });
+    drawRectangleAroundFaces();
+  }
+
+  // //TODO draw rectangles
+  drawRectangleAroundFaces() async {
+    image = await _image?.readAsBytes();
+    image = await decodeImageFromList(image);
+    setState(() {
+      image;
+      result;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+    // TODO: implement build
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+          body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+              image: AssetImage('images/bg.jpg'), fit: BoxFit.cover),
+        ),
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+          children: [
+            const SizedBox(
+              width: 100,
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+            Container(
+              margin: const EdgeInsets.only(top: 100),
+              child: Stack(children: <Widget>[
+                Center(
+                  child: ElevatedButton(
+                    onPressed: _imgFromGallery,
+                    onLongPress: _imgFromCamera,
+                    style: ElevatedButton.styleFrom(
+                        primary: Colors.transparent,
+                        shadowColor: Colors.transparent),
+                    child: Container(
+                      width: 335,
+                      height: 495,
+                      margin: const EdgeInsets.only(
+                        top: 45,
+                      ),
+                      child: image != null
+                          ? Center(
+                              child: FittedBox(
+                                child: SizedBox(
+                                  width: image.width.toDouble(),
+                                  height: image.width.toDouble(),
+                                  child: CustomPaint(
+                                    painter: FacePainter(
+                                        facesList: faces, imageFile: image),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Container(
+                              color: Colors.black,
+                              width: 340,
+                              height: 330,
+                              child: const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                              ),
+                            ),
+                    ),
+
+                    // Container(
+                    //   margin: const EdgeInsets.only(top: 8),
+                    //   child: _image != null
+                    //       ? Image.file(
+                    //           _image!,
+                    //           width: 335,
+                    //           height: 495,
+                    //           fit: BoxFit.fill,
+                    //         )
+                    //       : Container(
+                    //           width: 340,
+                    //           height: 330,
+                    //           color: Colors.black,
+                    //           child: const Icon(
+                    //             Icons.camera_alt,
+                    //             color: Colors.white,
+                    //             size: 100,
+                    //           ),
+                    //         ),
+                    // ),
+                  ),
+                ),
+              ]),
+            ),
+            Container(
+              margin: const EdgeInsets.only(top: 30),
+              child: Text(
+                result,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 36, color: Colors.red,fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      )),
     );
+  }
+}
+
+class FacePainter extends CustomPainter {
+  List<Face> facesList;
+  dynamic imageFile;
+  FacePainter({required this.facesList, @required this.imageFile});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (imageFile != null) {
+      canvas.drawImage(imageFile, Offset.zero, Paint());
+    }
+    Paint p = Paint();
+    p.color = Colors.red;
+    p.style = PaintingStyle.stroke;
+    p.strokeWidth = 5;
+
+    for (Face face in facesList) {
+      canvas.drawRect(face.boundingBox, p);
+    }
+
+    Paint p2 = Paint();
+    p2.color = Colors.green;
+    p2.style = PaintingStyle.stroke;
+    p2.strokeWidth = 5;
+
+    Paint p3 = Paint();
+    p3.color = Colors.yellow;
+    p3.style = PaintingStyle.stroke;
+    p3.strokeWidth = 5;
+
+    for (Face face in facesList) {
+      Map<FaceContourType, FaceContour?> con = face.contours;
+      List<Offset> offsetPoints = <Offset>[];
+      con.forEach((key, value) {
+        if (value != null) {
+          List<Point<int>>? points = value.points;
+          for (Point p in points) {
+            Offset offset = Offset(p.x.toDouble(), p.y.toDouble());
+            offsetPoints.add(offset);
+          }
+          canvas.drawPoints(PointMode.points, offsetPoints, p2);
+        }
+      });
+
+      //! If landmark detection was enabled with FaceDetectorOptions (mouth, ears,
+      //! eyes, cheeks, and nose available):
+      final FaceLandmark leftEar = face.landmarks[FaceLandmarkType.leftEar]!;
+      if (leftEar != null) {
+        final Point<int> leftEarPos = leftEar.position;
+        canvas.drawRect(
+            Rect.fromLTWH(leftEarPos.x.toDouble() - 5,
+                leftEarPos.y.toDouble() - 5, 10, 10),
+            p3);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) {
+    return true;
   }
 }
